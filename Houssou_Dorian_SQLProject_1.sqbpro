@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="/Users/dorianhoussou/Downloads/Chinook_Sqlite-2.sqlite" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="3350"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,5:mainAlbum"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="Houssou_Dorian_ProjectSQL_1.sql">/* BMGT 326 SQL Project 1 
+Name: Dorian Houssou
+UID:117980530
+*/
+--- Exercise 1 Q1 How many rows does the customer table have ?
+
+SELECT count(*)FROM Customer ; --59
+
+--Q2 
+SELECT*FROM Customer LIMIT 5; --Czech Republic 
+
+-- Q3
+SELECT  LastName FROM Customer 
+ORDER by LastName LIMIT 3 OFFSET 2; --Bernard
+
+-- Q4
+SELECT count(BillingState) FROM Invoice;  --210
+
+-- Execcrise 2 
+--q1 How many invoices have totals greater than $20?
+SELECT count(*) FROM Invoice
+WHERE total&gt;20;  --4
+
+--Q2 How many invoices have totals greater than $10 and less than $20?
+-- 
+SELECT count(*) FROM Invoice
+Where total&gt;10 and total&lt;20;  --60
+-- 
+-- q3  How many invoices are from customers in Brazil, Argentina, or Chile?
+SELECT count(*) FROM Invoice
+WHERE BillingCountry in (&quot;Brazil&quot;, &quot;Argentina&quot;, &quot;Chile&quot;) --49
+
+--q4 How many invoices have a billing country that starts with “C”?
+SELECT count(*) FROM Invoice
+WHERE BillingCountry like &quot;C%&quot; --77
+
+--q5  How many customers list their company?
+
+SELECT count(*)FROM Customer
+WHERE Company is NOT NULL --10
+
+--Execrise 3 
+--q1 How many employees does Chinook have?
+SELECT count(EmployeeID) as NumberofEmployeee FROM Employee --8
+
+-- q2 Create a new column that shows their phone numbers without the area code.
+SELECT *,  substr (Phone, length (phone)-7, 8)  as Phone_wo_areacode FROM Employee;
+
+--Q3 How long is the longest last name?
+SELECT  length (LastName) FROM Employee
+ORDER by length (LastName) DESC LIMIT 1--8
+
+-- Q4 How many employees were born on a Sunday?
+SELECT count(*) FROM Employee
+WHERE strftime('%w', BirthDate)= '0' --2
+
+--Q5 How old was the oldest employee when theywere hired?
+SELECT HireDate -BirthDate as AgeWhenHired FROM Employee
+ORDER  by BirthDate LIMIT 1  -- 56
+
+-- Exercise 4 
+--Q1 Return a list of countries by the total value of invoices in descending order.
+SELECT BillingCountry, sum(Total) as TotalValue FROM Invoice
+		GROUP by BillingCountry
+		ORDER by TotalValue DESC;
+
+--Q2 How many invoice line items are there?
+SELECT count(*) FROM InvoiceLine; --2240
+
+-- Q3 How many distinct prices are there?
+SELECT count ( DISTINCT  UnitPrice) as NumberofUniquePrice FROM InvoiceLine; --2
+
+-- Q4 How many downloads of each price have happened?
+SELECT UnitPrice,  sum (Quantity) as Downloaded FROM InvoiceLine
+GROUP  by UnitPrice;
+
+--q5 Which tracks have been downloaded the most times?
+SELECT TrackId,  sum (Quantity) as Downloaded FROM InvoiceLine
+GROUP  by  TrackId
+ORDER by Downloaded DESC;
+
+-- q6 
+SELECT min(InvoiceDATE ) as Earliest,  max (InvoiceDate) as Latest FROM Invoice --2009-2013
+
+
+--Excerise 5 
+
+--q1 Return the top five most downloaded trackswith the full name of the track and number of downloads.
+SELECT InvoiceLine.TrackId,Track.Name, sum( InvoiceLine.Quantity) as Downloaded 
+FROM InvoiceLine LEFT JOIN Track  ON InvoiceLine.TrackId = Track.TrackId
+GROUP by InvoiceLine.TrackId
+ORDER by Downloaded DESC;
+
+-- Q2 How many distinct albums have actually been downloaded?
+SELECT count(DISTINCT AlbumId) as UniqueAlbumDownloaded  
+FROM InvoiceLine, Track 
+WHERE InvoiceLine.TrackId= Track.TrackId; --304
+
+-- Q3 What is the most popular genre?
+CREATE TABLE Downloaded_by_Genre as 
+SELECT Track.GenreId, track.TrackId, sum(Quantity) as Downloaded
+FROM InvoiceLine, Track
+Where InvoiceLine.TrackId = Track.TrackId
+GROUP by Track.TrackId;
+				
+SELECT d.GenreId, g.Name, sum(Downloaded) as NumberOfDownloads
+FROM Downloaded_by_Genre as d, Genre g
+WHERE d.GenreId = g.GenreId
+GROUP by d.GenreId, g.Name
+ORDER by NumberOfDownloads DESC; --Rock
+				
+DROP TABLE Downloaded_by_Genre;
+
+--Additional questions
+--Q1
+SELECT count(*) FROM Playlist; -- 18
+--Q2
+SELECT count(*) FROM invoice_high
+WHERE BillingPostalCode is  NULL; -- 6 
+
+-- q3
+SELECT count(Distinct BillingPostalCode) FROM invoice_high
+WHERE BillingPostalCode is  NOT NULL; --55
+
+-- Q4
+SELECT MediaTypeId, count(TrackId) FROM Track
+GROUP by MediaTypeId;  -- 1/MPEG audio file
+
+-- Q5
+SELECT count(*) From Artist
+WHERE Name LIKE &quot;%k&quot;; --5
+--Q6 
+SELECT BillingCountry, AVG(Total) FROM Invoice
+GROUP by BillingCountry 
+Order by AVG (Total) DESC; -- Chile 6.66
+
+-- Q7
+SELECT Count(DISTINCT PlaylistId) FROM PlaylistTrack
+WHERE TrackId  = '3416';  --5 
+
+-- Q8
+SELECT Employee.EmployeeId, Employee.FirstName, Employee.LastName, SUM(Invoice.Total) AS TotalSales
+FROM Employee
+JOIN Customer ON Employee.EmployeeId = Customer.SupportRepId
+JOIN Invoice ON Customer.CustomerId = Invoice.CustomerId
+WHERE strftime('%Y', Invoice.InvoiceDate) = '2012'
+GROUP BY Employee.EmployeeId
+ORDER BY TotalSales DESC
+LIMIT 1; --Margaret Park
+
+
+
+
+</sql><sql name="&amp;Optimize">PRAGMA optimize;</sql><sql name="SQL PROJECT 1.sql">/*BMGT326 SQL Project 1
+	Name: 
+	UID: 
+	*/
+	
+-- Exercise 1 Q1: How many rows does the customer table have?
+SELECT count(*) FROM Customer;   -- 59
+
+-- Q2: If you select only the first 5 rows, what is the country in the last row?
+
+SELECT * FROM Customer LIMIT 5;   -- Czech Republic
+
+--Q3: If you sort the table on last name, what is the last name in the third row?
+SELECT LastName FROM Customer
+ORDER by LastName LIMIT 1 OFFSET 2;   -- Bernard
+	
+--Q4: How many rows in the invoice table have non-null BillingState?
+SELECT count(BillingState) FROM Invoice;   -- 210
+	
+-- Exercise 2 Q1: How many invoices have totals greater than $20?
+SELECT count(*) FROM Invoice
+WHERE total&gt;20;    -- 4
+	
+--Q2: How many invoices have totals greater than $10 and less than $20?
+SELECT count(*) FROM Invoice
+Where total&gt;10 and total&lt;20;   -- 60
+		
+--Q3: How many invoices are from customers in Brazil, Argentina, or Chile?
+SELECT count(*) FROM Invoice
+WHERE BillingCountry in (&quot;Brazil&quot;, &quot;Argentina&quot;, &quot;Chile&quot;);   -- 49
+		
+--Q4: How many invoices have a billing country that starts with “C”?
+		
+SELECT count(*) FROM Invoice
+WHERE BillingCountry like &quot;c%&quot;;   --77
+		
+--Q5: How many customers list their company?
+SELECT count(*) FROM Customer
+WHERE Company is NOT NULL;   -- 10
+		
+--Exercise 3 Q:1 How many employees does Chinook have?
+SELECT  count(EmployeeId) as NumberOfEmployee FROM Employee; --8
+		
+--Q2: Create a new column that shows their phone numbers without the area code.
+SELECT *, substr(Phone, length(Phone)-7,8) as Phone_wo_areacode FROM Employee;
+		
+-- Q3: How long is the longest last name?
+SELECT length(LastName) FROM Employee
+ORDER by length(LastName) DESC LIMIT 1; --8
+		
+--Q4: How many employees were born on a Sunday?
+
+SELECT count(*)FROM Employee
+WHERE strftime('%w', BirthDate)='0'; --2
+		
+--Q5: How old was the oldest employee when they were hired?
+SELECT HireDate-BirthDate as AgeWhenHired FROM Employee
+Order by BirthDate Limit 1; --56
+		
+-- Exercise 4 Q1: Return a list of countries by the total value of invoices in descending order.
+SELECT BillingCountry, sum(Total) as TotalValue FROM Invoice
+GROUP by BillingCountry
+ORDER by TotalValue DESC;
+		
+--Q2: How many invoice line items are there?
+SELECT count(*) FROM InvoiceLine; --2240
+		
+--Q3: How many distinct prices are there?
+SELECT count(DISTINCT UnitPrice) as NumberOfUniquePrice FROM InvoiceLine; --2
+--Q4: How many downloads of each price have happened?
+SELECT  UnitPrice, sum(Quantity) as Downloaded FROM InvoiceLine
+GROUP by UnitPrice;
+		
+--Q5: Which tracks have been downloaded the most times?
+SELECT TrackId, sum(Quantity) as Downloaded FROM InvoiceLine
+GROUP by TrackId
+ORDER by Downloaded DESC;
+		
+--Q6: What is the range of invoice dates covered by the database?
+SELECT min(InvoiceDate) as earliest, max(InvoiceDate) as Latest From Invoice;  --2009-2013
+
+
+--Exercise 5 Q1: Return the top five most downloaded tracks with the full name of the track and number of downloads.
+	
+SELECT InvoiceLine.TrackId, Track.Name, sum(InvoiceLine.Quantity) as Downloaded
+FROM InvoiceLine INNER JOIN Track ON InvoiceLine.TrackId = Track.TrackId
+GROUP by InvoiceLine.TrackId
+Order by Downloaded DESC;
+
+			
+--Q2: How many distinct albums have actually been downloaded?
+SELECT  count(DISTINCT AlbumId) as UniqueAlbumDownloaded
+FROM InvoiceLine, Track
+Where InvoiceLine.TrackId = Track.TrackId;  --304
+			
+--Q3: What is the most popular genre?
+CREATE TABLE Downloaded_by_Genre as 
+SELECT Track.GenreId, track.TrackId, sum(Quantity) as Downloaded
+FROM InvoiceLine, Track
+Where InvoiceLine.TrackId = Track.TrackId
+GROUP by Track.TrackId;
+				
+SELECT d.GenreId, g.Name, sum(Downloaded) as NumberOfDownloads
+FROM Downloaded_by_Genre as d, Genre g
+WHERE d.GenreId = g.GenreId
+GROUP by d.GenreId, g.Name
+ORDER by NumberOfDownloads DESC; --Rock
+				
+DROP TABLE Downloaded_by_Genre;
+				
+			
+
+-- additional Q1: How many records are in the Playlist table?
+
+SELECT count(*) FROM Playlist;  --18
+		
+-- Q2: How many records have a missing BillingPostalCode in the invoice_high table?
+
+Select count(*) FROM  invoice_high
+WHERE BillingPostalCode is NULL; --6
+		
+--Q3: How many distinct zip codes are there in the invoice_high table, not including the missing zip codes?
+SELECT  count(Distinct BillingPostalCode) FROM invoice_high
+WHERE BillingPostalCode is NOT NULL;  --55
+		
+-- Q4:  What is the most common media type for all the tracks? Provide the MediaType name.
+		
+SELECT MediaTypeId,  count(TrackId) FROM Track
+GROUP by MediaTypeId;  -- 1/MPEG audio file
+		
+--Q5:  How many artists’ names end with ”k”?
+SELECT count(*) From Artist
+WHERE Name like &quot;%k&quot;; -- 5
+		
+--Q6: Which country has the largest average amount in the Invoice table? Provide the country name and the average amount rounded to 2 decimals.
+
+SELECT  BillingCountry, AVG(Total)  FROM Invoice
+GROUP by BillingCountry
+Order by avg(Total) DESC; -- Chile 6.66
+		
+--Q7: How many playlists include the track “Ave Maria”?
+		
+SELECT  Count (DISTINCT PlaylistId) FROM PlaylistTrack
+WHERE TrackId = '3416'; --5
+		
+		
+		
+--Q8: Who was the best performing employee in 2012? Provide the name of the employee associated with most sales and her (or his) sales amount in 2012
+		
+SELECT strftime('%Y', Invoice.InvoiceDate)='2012', Customer.SupportRepId, Employee.FirstName, Employee.LastName, Invoice.CustomerId, sum(Invoice.Total) FROM Customer, Invoice, Employee
+WHERE Customer.CustomerId = Invoice.CustomerId and Employee.EmployeeId = Customer.SupportRepId
+Group by Customer.SupportRepId
+Order by sum(Invoice.Total) Desc; 
+		
+		
+		
+		
+		
+
+	
+
+
+
+
+</sql><sql name="Houssou_Dorian_ProjectSQL_1.sql">/* BMGT 326 SQL Project 1 
+Name: Dorian Houssou
+UID:117980530
+*/
+--- Exercise 1 Q1 How many rows does the customer table have ?
+
+SELECT count(*)FROM Customer ; --59
+
+--Q2 
+SELECT*FROM Customer LIMIT 5; --Czech Republic 
+
+-- Q3
+SELECT  LastName FROM Customer 
+ORDER by LastName LIMIT 3 OFFSET 2; --Bernard
+
+-- Q4
+SELECT count(BillingState) FROM Invoice;  --210
+
+-- Execcrise 2 
+--q1 How many invoices have totals greater than $20?
+SELECT* FROM Invoice
+WHERE total&gt;20;
+
+--Q2 How many invoices have totals greater than $10 and less than $20?
+-- 
+SELECT*FROM Invoice 
+WHERE total&gt;10 AND total&lt;20;
+-- 
+-- q3  How many invoices are from customers in Brazil, Argentina, or Chile?
+SELECT count(*) FROM Invoice
+WHERE BillingCountry in (&quot;Brazil&quot;, &quot;Argentina &quot;, &quot;Chile&quot;) ;
+
+--q4 How many invoices have a billing country that starts with “C”?
+SELECT count(*) FROM Invoice
+WHERE BillingCountry like &quot;C%&quot;
+
+--q5  How many customers list their company?
+
+SELECT count(*)FROM Customer
+WHERE Company is NOT NULL 
+
+--Execrise 3 
+--q1 How many employees does Chinook have?
+SELECT count(EmployeeID) as NumberofEmployeee FROM Employee --8
+
+-- q2 Create a new column that shows their phone numbers without the area code.
+SELECT *,  substr (Phone, length (phone)-7, 8)  as Phone_wo_areacode FROM Employee;
+
+--Q3 How long is the longest last name?
+SELECT  length (LastName) FROM Employee
+ORDER by length (LastName) DESC LIMIT 1--8
+
+-- Q4 How many employees were born on a Sunday?
+SELECT count(*) FROM Employee
+WHERE strftime('%w', BirthDate)= '0'
+
+--Q5 How old was the oldest employee when theywere hired?
+SELECT HireDate -BirthDate as AgeWhenHired FROM Employee
+ORDER  by BirthDate LIMIT 1  
+
+-- Exercise 4 
+--Q1 Return a list of countries by the total value of invoices in descending order.
+SELECT BillingCountry, sum(Total) as TotalValue FROM Invoice
+		GROUP by BillingCountry
+		ORDER by TotalValue DESC;
+
+--Q2 How many invoice line items are there?
+SELECT count(*) FROM InvoiceLine;
+
+-- Q3 How many distinct prices are there?
+SELECT count ( DISTINCT  UnitPrice) as NumberofUniquePrice FROM InvoiceLine;
+
+-- Q4 How many downloads of each price have happened?
+SELECT UnitPrice,  sum (Quantity) as Downloaded FROM InvoiceLine
+GROUP  by UnitPrice;
+
+--q5 Which tracks have been downloaded the most times?
+SELECT TrackId,  sum (Quantity) as Downloaded FROM InvoiceLine
+GROUP  by  TrackId
+ORDER by Downloaded DESC;
+
+-- q6 
+SLEECT min(InvoiceDATE ) as Earliest,  max (InvoiceDate) as Latest FROM Invoice;
+
+
+--Excerise 5 
+
+--q1 Return the top five most downloaded trackswith the full name of the track and number of downloads.
+SELECT InvoiceLine.TrackId,Track.Name, sum( InvoiceLine.Quantity) as Downloaded 
+FROM InvoiceLine LEFT JOIN Track  ON InvoiceLine.TrackId = Track.TrackId
+GROUP by InvoiceLine.TrackId
+ORDER by Downloaded DESC;
+
+-- Q2 How many distinct albums have actually been downloaded?
+SELECT count(DISTINCT AlbumId) as UniqueAlbumDownloaded  
+FROM InvoiceLine, Track 
+WHERE InvoiceLine.TrackId= Track.TrackId;
+
+-- Q3 What is the most popular genre?
+CREATE TABLE Downloaded_by_Genre as 
+SELECT Track.GenreId,  track.TrackId, sum(Quantity) as Downloaded 
+FROM InvoiceLine, Track 
+WHERE InvoiceLine.TrackId = Track.TrackId
+GROUP by Track.TrackId;
+
+
+SELECT d.GenreId,  g.Name,  sum(Downloaded) as NumberOfDownloads
+FROM Downloaded_by_Genre as d,  Genre g
+WHERE d.GenreId = g.GenreId
+GROUP by d.GenreId , g.Name
+ORDER by NumberOfDownloads DESC;
+
+DROP TABLE Downloaded_by_Genre;
+
+--Additional questions
+--Q1
+SELECT count(*) FROM Playlist; -- 18
+--Q2
+SELECT count(*) FROM invoice_high
+WHERE BillingPostalCode is  NULL; -- 6 
+
+-- q3
+SELECT count(Distinct BillingPostalCode) FROM invoice_high
+WHERE BillingPostalCode is  NOT NULL; --55
+
+-- Q4
+SELECT MediaTypeId, count(TrackId) FROM Track
+GROUP by MediaTypeId; 
+
+-- Q5
+SELECT count(*) From Artist
+WHERE Name LIKE &quot;%k&quot;; --5
+--Q6 
+SELECT BillingCountry, AVG(Total) FROM Invoice
+GROUP by BillingCountry 
+Order by AVG (Total) DESC; -- Chile 6.66
+
+-- Q7
+SELECT Count(DISTINCT PlaylistId) FROM PlaylistTrack
+WHERE TrackId  = '3416';  --5 
+
+-- Q8
+SELECT Employee.EmployeeId, Employee.FirstName, Employee.LastName, SUM(Invoice.Total) AS TotalSales
+FROM Employee
+JOIN Customer ON Employee.EmployeeId = Customer.SupportRepId
+JOIN Invoice ON Customer.CustomerId = Invoice.CustomerId
+WHERE strftime('%Y', Invoice.InvoiceDate) = '2012'
+GROUP BY Employee.EmployeeId
+ORDER BY TotalSales DESC
+LIMIT 1; --Margaret Park
+
+
+
+</sql><current_tab id="0"/></tab_sql></sqlb_project>

@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="/Users/dorianhoussou/Downloads/Houssou_Dorian_SQL 2.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser query" current="2"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1500"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,12:mainPCard_AY2014"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="Houssou_Dorian_SQLProject_II.sql"> --BMGT326 SQL Porject II     Name: Dorian Houssou  UID: 117980530
+ 
+ 
+ --1. Find large transactions of purchase from Amazon
+   
+   SELECT Vendor, CardholderFirstInitial || '. ' || CardholderLastName as Cardholder, Amount, strftime('%Y' , TransactionDate) as Year, 
+   strftime('%m' , TransactionDate) as Month FROM PCard_AY2014
+   WHERE Amount&gt;3000 AND  Year = '2014' AND Vendor Like '%Amazon%' 
+   ORDER by Amount;  --10 records
+   
+   --2.1.User shall not spend more than $50,000
+   
+   SELECT CardholderFirstInitial || '. ' || CardholderLastName as Cardholder,  sum(Amount) as Total_Spending FROM PCard_AY2014
+   WHERE strftime('%Y' , TransactionDate)='2014'
+   GROUP by Cardholder
+   HAVING Total_Spending &gt;50000
+   ORDER by Total_Spending DESC; --316 records
+   
+  --2.2 User shall not spend more than $10,000 per month without approval.
+  SELECT CardHolderFirstInitial || ' ' || CardholderLastName AS Cardholder, 
+       strftime('%m', TransactionDate) AS Month, 
+       SUM(Amount) AS Monthly_Spending 
+FROM PCard_AY2014
+WHERE strftime('%Y', TransactionDate) = '2014'
+GROUP BY Cardholder, Month
+HAVING Monthly_Spending &gt; 10000
+ORDER BY Month, Monthly_Spending DESC;  --1688 records 
+
+
+ --Create a clean table with cardholder column and only 2014 calendar year data
+   
+   CREATE TABLE CY2014_PCard as
+   SELECT CardholderFirstInitial||'. '||CardholderLastName as Cardholder, Vendor, Amount, TransactionDate, PostedDate, MerchantCategoryCode FROM PCard_AY2014
+   WHERE  strftime('%Y' , TransactionDate) = '2014';
+   
+   
+   --3.User shall not spend more than 5000 per transaction
+--1. Find large transactions of purchase from Amazon
+   
+   SELECT Vendor, CardholderFirstInitial || '. ' || CardholderLastName as Cardholder, Amount, strftime('%Y' , TransactionDate) as Year, 
+   strftime('%m' , TransactionDate) as Month FROM PCard_AY2014
+   WHERE Amount&gt;3000 AND  Year = '2014' AND Vendor Like '%Amazon%' 
+   ORDER by Amount;  --10 records
+   
+   --2.1.User shall not spend more than $50,000
+   
+   SELECT CardholderFirstInitial || '. ' || CardholderLastName as Cardholder,  sum(Amount) as Total_Spending FROM PCard_AY2014
+   WHERE strftime('%Y' , TransactionDate)='2014'
+   GROUP by Cardholder
+   HAVING Total_Spending &gt;50000
+   ORDER by Total_Spending DESC; --316 records
+   
+  --2.2 User shall not spend more than $10,000 per month without approval.
+  SELECT CardHolderFirstInitial || ' ' || CardholderLastName AS Cardholder, 
+       strftime('%m', TransactionDate) AS Month, 
+       SUM(Amount) AS Monthly_Spending 
+FROM PCard_AY2014
+WHERE strftime('%Y', TransactionDate) = '2014'
+GROUP BY Cardholder, Month
+HAVING Monthly_Spending &gt; 10000
+ORDER BY Month, Monthly_Spending DESC;  --1688 records 
+
+
+ --Create a clean table with cardholder column and only 2014 calendar year data
+   
+   CREATE TABLE CY2014_PCard as
+   SELECT CardholderFirstInitial||'. '||CardholderLastName as Cardholder, Vendor, Amount, TransactionDate, PostedDate, MerchantCategoryCode FROM PCard_AY2014
+   WHERE  strftime('%Y' , TransactionDate) = '2014';
+   
+   
+   --3.User shall not spend more than 5000 per transaction
+   SELECT Cardholder, Amount, TransactionDate, PostedDate From CY2014_PCard
+   WHERE Amount &gt; 5000
+   Order by Amount DESC; --1351
+
+   
+   -- 2.4.
+   SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate 
+   FROM CY2014_PCard p JOIN
+   (Select Vendor, Cardholder, TransactionDate, sum(amount) as daily_spending, count(amount) as No_of_Transactions 
+   FROM CY2014_PCard
+   GROUP by Vendor, Cardholder, TransactionDate
+   HAVING daily_spending &gt; 5000 And No_of_Transactions &gt;1)  v 
+   on p.Cardholder = v.Cardholder 
+   AND  p.Vendor = v.Vendor AND p.TransactionDate = v.TransactionDate; --3162
+
+   --2.5. Purchases should not be split between two or more cardholders.
+SELECT p.Cardholder, p.Vendor, Amount, p.TransactionDate,
+PostedDate FROM CY2014_PCard p JOIN
+ (SELECT Vendor, TransactionDate, sum(amount) as Daily_spending,
+count (DISTINCT Cardholder) as no_of_cardholders FROM CY2014_PCard
+GROUP by vendor, TransactionDate
+HAVING no_of_cardholders = 2 AND Daily_spending &gt; 5000) v
+ON p.Vendor = v.Vendor AND p.TransactionDate = v.TransactionDate
+ORDER by p.TransactionDate; --1177 
+
+--6. Purchases should not be split between two or more vendors.
+SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate FROM CY2014_PCard p JOIN
+   (Select Cardholder, TransactionDate, count(DISTINCT Vendor) as No_of_Vendors, sum(Amount) as Daily_Spending FROM CY2014_PCard
+   GROUP by Cardholder, TransactionDate
+   HAVING No_of_Vendors = 2  and Daily_Spending &gt; 5000 )  v on  p.Cardholder = v.Cardholder AND p.TransactionDate = v.TransactionDate
+   ORDER by p.TransactionDate;  -- 1769
+
+
+-- 
+ --2.7 Tramsactions are prohibited for expenses for expenses for food and mileage without traveling. A per diem for food expn 
+SELECT p.Cardholder, p.TransactionDate, p.Vendor, p.MerchantCategoryCode
+FROM CY2014_PCard p
+JOIN (
+    SELECT Cardholder, TransactionDate
+    FROM CY2014_PCard
+    WHERE MerchantCategoryCode LIKE '%hotel%'
+       OR MerchantCategoryCode LIKE '%motel%'
+       OR MerchantCategoryCode LIKE '%inn%'
+       OR MerchantCategoryCode LIKE '%resort%'
+) t ON p.Cardholder = t.Cardholder AND p.TransactionDate = t.TransactionDate
+WHERE p.MerchantCategoryCode LIKE '%food%'
+   OR p.MerchantCategoryCode LIKE '%restaurant%'; -- 881
+   
+   
+ 
+   
+  
+   
+   
+   
+</sql><sql name="SQL_ProjectII.sql">
+
+   --1. 
+   
+   SELECT Vendor, CardholderFirstInitial || '. ' || CardholderLastName as Cardholder, Amount, strftime('%Y' , TransactionDate) as Year, 
+   strftime('%m' , TransactionDate) as Month FROM PCard_AY2014
+   WHERE Amount &gt; 3000 AND  Year = '2014' AND Vendor Like '%Amazon%' 
+   ORDER by Amount;  --10 records
+   
+   --2.1 
+   
+   SELECT CardholderFirstInitial || '. ' || CardholderLastName as Cardholder,  sum(Amount) as Total_Spending FROM PCard_AY2014
+   WHERE strftime('%Y' , TransactionDate)='2014'
+   GROUP by Cardholder
+   HAVING Total_Spending &gt; 50000
+   ORDER by Total_Spending DESC; --316 records
+   
+   --Create a clean table with cardholder column and only 2014 calendar year data
+   
+   CREATE TABLE CY2014_PCard as
+   SELECT CardholderFirstInitial || '. ' || CardholderLastName as Cardholder, Vendor, Amount, TransactionDate, PostedDate, MerchantCategoryCode FROM PCard_AY2014
+   WHERE  strftime('%Y' , TransactionDate)='2014';
+   
+   --2.2 
+   SELECT Cardholder, sum(Amount) as Total_Spent, strftime('%m' , TransactionDate) as Month FROM CY2014_PCard
+   GROUP by Cardholder, Month
+   HAVING Total_Spent &gt;10000
+   ORDER by Month, Total_Spent DESC; --1688 records
+   
+   --2.3 
+   
+   SELECT Cardholder, Amount, TransactionDate, PostedDate From CY2014_PCard
+   WHERE Amount &gt; 5000
+   Order by Amount DESC; ---1351 records
+   
+   
+   -- 2.4 
+   SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate FROM CY2014_PCard p JOIN
+   (Select Vendor, Cardholder, TransactionDate, sum(amount) as daily_spending, count(amount) as No_of_Transactions FROM CY2014_PCard
+   GROUP by Vendor, Cardholder, TransactionDate
+   HAVING daily_spending &gt; 5000 And No_of_Transactions &gt;1)  v on p.Cardholder = v.Cardholder AND  p.Vendor = v.Vendor AND p.TransactionDate = v.TransactionDate; --3162 records
+   
+   --2.5 
+   SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate FROM CY2014_PCard p JOIN
+   (Select Vendor, TransactionDate, count(DISTINCT Cardholder) as No_of_Cardholders, sum(Amount) as Daily_Spending FROM CY2014_PCard
+   GROUP by Vendor, TransactionDate
+   HAVING No_of_Cardholders = 2  and Daily_Spending &gt; 5000 )  v on  p.Vendor = v.Vendor AND p.TransactionDate = v.TransactionDate
+   ORDER by p.TransactionDate;  --1177 records
+   
+   --2.6 
+   SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate FROM CY2014_PCard p JOIN
+   (Select Cardholder, TransactionDate, count(DISTINCT Vendor) as No_of_Vendors, sum(Amount) as Daily_Spending FROM CY2014_PCard
+   GROUP by Cardholder, TransactionDate
+   HAVING No_of_Vendors = 2  and Daily_Spending &gt; 5000 )  v on  p.Cardholder = v.Cardholder AND p.TransactionDate = v.TransactionDate
+   ORDER by p.TransactionDate;  --1769 records
+   
+   --2.7
+   
+	SELECT p. Cardholder, P.TransactionDate, Vendor, Amount, PostedDate, p.MerchantCategoryCode FROM CY2014_PCard p JOIN 
+	(SELECT Cardholder, TransactionDate, MerchantCategoryCode FROM CY2014_PCard
+	WHERE MerchantCategoryCode like '%hotel%' or MerchantCategoryCode like '%motel%' or MerchantCategoryCode like '%resort%' or MerchantCategoryCode like '%inn%') t
+	ON p.Cardholder = t.Cardholder and p.TransactionDate = t.TransactionDate
+	WHERE p.MerchantCategoryCode like '%food%' or p.MerchantCategoryCode like '%restaurant%'
+	ORDER by p.Cardholder, Amount;  --881 records
+</sql><sql name="SQL 3">-BMGT326 SQL Porject II     Name: Dorian Houssou  UID: 117980530
+ 
+ 
+ --1. Find large transactions of purchase from Amazon
+   
+   SELECT Vendor, CardholderFirstInitial || '. ' || CardholderLastName as Cardholder, Amount, strftime('%Y' , TransactionDate) as Year, 
+   strftime('%m' , TransactionDate) as Month FROM PCard_AY2014
+   WHERE Amount&gt;3000 AND  Year = '2014' AND Vendor Like '%Amazon%' 
+   ORDER by Amount;  --10 records
+   
+   --2.1.User shall not spend more than $50,000
+   
+   SELECT CardholderFirstInitial || '. ' || CardholderLastName as Cardholder,  sum(Amount) as Total_Spending FROM PCard_AY2014
+   WHERE strftime('%Y' , TransactionDate)='2014'
+   GROUP by Cardholder
+   HAVING Total_Spending &gt;50000
+   ORDER by Total_Spending DESC; --316 records
+   
+  --2.2 User shall not spend more than $10,000 per month without approval.
+  SELECT CardHolderFirstInitial || ' ' || CardholderLastName AS Cardholder, 
+       strftime('%m', TransactionDate) AS Month, 
+       SUM(Amount) AS Monthly_Spending 
+FROM PCard_AY2014
+WHERE strftime('%Y', TransactionDate) = '2014'
+GROUP BY Cardholder, Month
+HAVING Monthly_Spending &gt; 10000
+ORDER BY Month, Monthly_Spending DESC;  --1688 records 
+
+
+ --Create a clean table with cardholder column and only 2014 calendar year data
+   
+   CREATE TABLE CY2014_PCard as
+   SELECT CardholderFirstInitial||'. '||CardholderLastName as Cardholder, Vendor, Amount, TransactionDate, PostedDate, MerchantCategoryCode FROM PCard_AY2014
+   WHERE  strftime('%Y' , TransactionDate) = '2014';
+   
+   
+   --3.User shall not spend more than 5000 per transaction
+--1. Find large transactions of purchase from Amazon
+   
+   SELECT Vendor, CardholderFirstInitial || '. ' || CardholderLastName as Cardholder, Amount, strftime('%Y' , TransactionDate) as Year, 
+   strftime('%m' , TransactionDate) as Month FROM PCard_AY2014
+   WHERE Amount&gt;3000 AND  Year = '2014' AND Vendor Like '%Amazon%' 
+   ORDER by Amount;  --10 records
+   
+   --2.1.User shall not spend more than $50,000
+   
+   SELECT CardholderFirstInitial || '. ' || CardholderLastName as Cardholder,  sum(Amount) as Total_Spending FROM PCard_AY2014
+   WHERE strftime('%Y' , TransactionDate)='2014'
+   GROUP by Cardholder
+   HAVING Total_Spending &gt;50000
+   ORDER by Total_Spending DESC; --316 records
+   
+  --2.2 User shall not spend more than $10,000 per month without approval.
+  SELECT CardHolderFirstInitial || ' ' || CardholderLastName AS Cardholder, 
+       strftime('%m', TransactionDate) AS Month, 
+       SUM(Amount) AS Monthly_Spending 
+FROM PCard_AY2014
+WHERE strftime('%Y', TransactionDate) = '2014'
+GROUP BY Cardholder, Month
+HAVING Monthly_Spending &gt; 10000
+ORDER BY Month, Monthly_Spending DESC;  --1688 records 
+
+
+ --Create a clean table with cardholder column and only 2014 calendar year data
+   
+   CREATE TABLE CY2014_PCard as
+   SELECT CardholderFirstInitial||'. '||CardholderLastName as Cardholder, Vendor, Amount, TransactionDate, PostedDate, MerchantCategoryCode FROM PCard_AY2014
+   WHERE  strftime('%Y' , TransactionDate) = '2014';
+   
+   
+   --3.User shall not spend more than 5000 per transaction
+   SELECT Cardholder, Amount, TransactionDate, PostedDate From CY2014_PCard
+   WHERE Amount &gt; 5000
+   Order by Amount DESC; --1351
+
+   
+   -- 2.4.
+   SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate 
+   FROM CY2014_PCard p JOIN
+   (Select Vendor, Cardholder, TransactionDate, sum(amount) as daily_spending, count(amount) as No_of_Transactions 
+   FROM CY2014_PCard
+   GROUP by Vendor, Cardholder, TransactionDate
+   HAVING daily_spending &gt; 5000 And No_of_Transactions &gt;1)  v 
+   on p.Cardholder = v.Cardholder 
+   AND  p.Vendor = v.Vendor AND p.TransactionDate = v.TransactionDate; --3162
+
+   --2.5. Purchases should not be split between two or more cardholders.
+SELECT p.Cardholder, p.Vendor, Amount, p.TransactionDate,
+PostedDate FROM CY2014_PCard p JOIN
+ (SELECT Vendor, TransactionDate, sum(amount) as Daily_spending,
+count (DISTINCT Cardholder) as no_of_cardholders FROM CY2014_PCard
+GROUP by vendor, TransactionDate
+HAVING no_of_cardholders = 2 AND Daily_spending &gt; 5000) v
+ON p.Vendor = v.Vendor AND p.TransactionDate = v.TransactionDate
+ORDER by p.TransactionDate; --1177 
+
+--6. Purchases should not be split between two or more vendors.
+SELECT p.Cardholder, p.vendor, Amount, p.TransactionDate, PostedDate FROM CY2014_PCard p JOIN
+   (Select Cardholder, TransactionDate, count(DISTINCT Vendor) as No_of_Vendors, sum(Amount) as Daily_Spending FROM CY2014_PCard
+   GROUP by Cardholder, TransactionDate
+   HAVING No_of_Vendors = 2  and Daily_Spending &gt; 5000 )  v on  p.Cardholder = v.Cardholder AND p.TransactionDate = v.TransactionDate
+   ORDER by p.TransactionDate;  -- 1769
+
+
+-- 
+ --2.7 Tramsactions are prohibited for expenses for expenses for food and mileage without traveling. A per diem for food expn 
+SELECT p.Cardholder, p.TransactionDate, p.Vendor, p.MerchantCategoryCode
+FROM CY2014_PCard p
+JOIN (
+    SELECT Cardholder, TransactionDate
+    FROM CY2014_PCard
+    WHERE MerchantCategoryCode LIKE '%hotel%'
+       OR MerchantCategoryCode LIKE '%motel%'
+       OR MerchantCategoryCode LIKE '%inn%'
+       OR MerchantCategoryCode LIKE '%resort%'
+) t ON p.Cardholder = t.Cardholder AND p.TransactionDate = t.TransactionDate
+WHERE p.MerchantCategoryCode LIKE '%food%'
+   OR p.MerchantCategoryCode LIKE '%restaurant%'; -- 881
+   </sql><current_tab id="0"/></tab_sql></sqlb_project>
